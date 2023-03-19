@@ -12,24 +12,36 @@ import retrofit2.Response
 class MainActivity : AppCompatActivity() {
     lateinit var adapter: NewsAdapter
     lateinit var newsList: RecyclerView
+    private var articles = mutableListOf<Article>()
+    var pageNum = 1
+    var totalResults = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         newsList = findViewById(R.id.newsList)
+        adapter = NewsAdapter(this@MainActivity, articles)
+        newsList.adapter = adapter
+        val layoutManager = LinearLayoutManager(this@MainActivity)
+
+        newsList.layoutManager = layoutManager
+
         getNews()
+        if(totalResults>layoutManager.itemCount && layoutManager.findFirstVisibleItemPosition() >= layoutManager.itemCount - 5) {
+            pageNum++
+            getNews()
+        }
     }
 
     private fun getNews() {
-        val news = NewsService.newsInstance.getHeadlines("in", 1)
+        val news = NewsService.newsInstance.getHeadlines("in", pageNum)
         news.enqueue(object: Callback<News>{
             override fun onResponse(call: Call<News>, response: Response<News>) {
                 val news = response.body()
                 if(news != null) {
-                    Log.d("TAG", news.toString())
-                    adapter = NewsAdapter(this@MainActivity, news.articles)
-                    newsList.adapter = adapter
-                    newsList.layoutManager = LinearLayoutManager(this@MainActivity)
+                    totalResults = news.totalResults
+                    articles.addAll(news.articles)
+                    adapter.notifyDataSetChanged()
                 }
 
             }
